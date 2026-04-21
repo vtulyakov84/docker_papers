@@ -85,10 +85,10 @@ apt-get update
 ### 3.2 Поиск и установка пакетов
 ```bash
 # Поиск пакета <package-name> в репозитории
-apt-cache search <package-name>
+apt-cache search <имя-разыкиваемого-пакета>
 
 # Установка пакета <package-name>
-apt-get install <package-name>
+apt-get install <имя-устанавливаемого-пакета>
 ```
 
 ### 3.3 Очистка кэша пакетов
