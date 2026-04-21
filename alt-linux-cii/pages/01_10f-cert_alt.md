@@ -121,7 +121,11 @@ apt-get clean
 FROM registry.altlinux.org/c10f-cert/alt:latest
 
 RUN apt-get update && \
-    apt-get install -y <нужный-пакет> && \
+    apt-get install -y
+        <имя-пакета-1> \
+        <имя-пакета-2> \
+        ... \
+        <имя-пакета-N> && \
     apt-get clean
 ```
 
