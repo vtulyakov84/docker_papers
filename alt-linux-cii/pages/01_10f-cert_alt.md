@@ -50,7 +50,7 @@ docker run -it registry.altlinux.org/c10f-cert/alt:latest /bin/bash
 
 ### 2.2 Выход из контейнера
 ```bash
-exit
+[root@... /]# exit
 ```
 После этого вы вернётесь в хостовую систему:
 
