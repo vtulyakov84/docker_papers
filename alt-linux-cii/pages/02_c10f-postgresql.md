@@ -1,4 +1,4 @@
-## Работа с образом PostgreSQL `registry.altlinux.org/c10f/postgresql`
+## Работа с образом базы данных `registry.altlinux.org/c10f/postgresql`
 
 Обзор конфигурации контейнера:
 
