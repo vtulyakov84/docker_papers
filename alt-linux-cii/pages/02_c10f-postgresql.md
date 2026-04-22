@@ -10,7 +10,7 @@
 
 ### 1. Файловая структура проекта
 ```bash
-[user@vbox postgres]$ tree .
+[user@host postgres]$ tree .
 postgres
 ├── config
 │   ├── pg_hba.conf
@@ -31,7 +31,7 @@ postgres
 ```bash
 # При отсутствии образа в локальном хранилище хоста
 # он будет скачан с указанного репозитория
-[user@... postgres]$ docker run -it registry.altlinux.org/c10f/postgresql bash
+[user@host postgres]$ docker run -it registry.altlinux.org/c10f/postgresql bash
 bash-4.4$ 
 ```
 
