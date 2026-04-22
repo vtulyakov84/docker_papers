@@ -26,8 +26,6 @@ postgres
 `./scripts/`               - каталог скриптов инициализации базы данных  
 `./Dockerfile`             - сценарий создание контейнера
 
-> Файлы `postgresql.conf` и `pg_hba.conf` при сборке образа будут скопированы в будущий контейнер.
-
 ### 2. Запуск контейнера
 
 ```bash
@@ -77,7 +75,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 _=/usr/bin/printenv
 ```
 
-Файл конфигураций из каталога `./config/postgresql.conf` и ``./config/pg_hba.conf`` в сценарии сборка образа Docker будем копировать в каталог контейнера `/var/lib/pgsql/data`.
+> Файлы конфигураций из `./config/postgresql.conf` и ``./config/pg_hba.conf`` в сценарии сборка образа Docker будут скопированы в каталог контейнера `/var/lib/pgsql/data`.
 
 #### 2.2. Сбор информации о работе postgres
 
@@ -114,7 +112,7 @@ host    all             all             0.0.0.0/0               md5
 host    all             all             ::1/128                 trust
 ```
 
-> ... в доработке, поменять место хранение файлов данных из каталога в хостовый каталог.
+> ... в доработке, поменять место хранение файлов базы данных из каталога `/var/lib/pgsql/data` в хостовый каталог `/var/lib/postgresql/data?`. Пробрасывать каталог будем при запуске контейнера `docker run -v source:dest ...` или в секции `volume` файла `docker-compose.yml`.
 
 ### 4. Сборка своего образа на базе `registry.altlinux.org/c10f/postgresql`
 
@@ -155,3 +153,10 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 # Запускаем с явным указанием конфигов
 CMD ["sh", "-c", "postgres -D ${PGDATA} -c config_file=${PGDATA}/postgresql.conf -c hba_file=${PGDATA}/pg_hba.conf"]
 ```
+
+>Добавить:
+* Команды сборки образа
+* Команды управления контейнером
+* Команды проверки подклчения к БД SHOW, psql -U postgres
+* Подключение из DBeaver (, не забыть пробросить порты -p 5432:5432)
+* ,,,
