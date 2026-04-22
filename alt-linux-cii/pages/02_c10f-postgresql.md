@@ -11,23 +11,23 @@
 ### 1. Файловая структура проекта
 ```bash
 [user@vbox postgres]$ tree .
-.
+postgres
 ├── config
 │   ├── pg_hba.conf
 │   └── postgresql.conf
-├── Dockerfile
-└── scripts
-    └── initdb.sql
+├── scripts
+│   └── initdb.sql
+│
+└── Dockerfile
 ```
 
 `./config/pg_hba.conf`     - конфигурация аутентификации и доступа к базе данных
 `./config/postgresql.conf` - конфигурация основных настроек сервера
-`./Dockerfile`             - сценарий создание контейнера
 `./scripts/`               - каталог скриптов инициализации базы данных  
+`./Dockerfile`             - сценарий создание контейнера
 
 ### 2. Запуск контейнера
 
-#### 2.1. Сбор общей информации
 ```bash
 # При отсутствии образа в локальном хранилище хоста
 # он будет скачан с указанного репозитория
@@ -73,13 +73,9 @@ TERM=xterm
 SHLVL=1
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 _=/usr/bin/printenv
-
-# - открыт ли порт прослушки
-bash-4.4$ ss -tulpn | grep 5432
-Netid    State    Recv-Q    Send-Q         Local Address:Port         Peer Address:Port    Process 
 ```
 
-В домашнем каталоге пользователя `postgres` (`/var/lib/pgsql`)будем хранить файлы конфигурации работы PostgreSQL `postgresql.conf`, `pg_hba.conf`.
+Файл конфигураций из каталога `./config/postgresql.conf` и ``./config/pg_hba.conf`` в сценарии сборка образа Docker будем копировать в каталог контейнера `/var/lib/pgsql/data`.
 
 #### 2.2. Сбор информации о работе postgres
 
@@ -88,13 +84,7 @@ Netid    State    Recv-Q    Send-Q         Local Address:Port         Peer Addre
 bash-4.4$ postgres --help
 ```
 
-> **NoteBene!** При подключении к базе данных из контейнера выходит ошибка 
-bash-4.4$ psql -d postgres -p 5432
-psql: error: connection to server on socket "/tmp/.s.PGSQL.5432" failed: No such file or directory
-        Is the server running locally and accepting connections on that socket?
-Позже проверить подключение с командной строки внутри контейнера, после сборки образа с файлами конфигурации.
-
-### 3. Определение параметров для сборки своего образа
+### 3. Содержание конфигурационных файлов `postgresql.conf` и `pg_hba.conf`.
 
 #### 3.1. Файл конфигурации работы сервера `./postgresql.conf`:
 ```ini
@@ -103,55 +93,63 @@ port = 5432
 max_connections = 100
 shared_buffers = 128MB
 dynamic_shared_memory_type = posix
-max_wal_size = 1GB
-min_wal_size = 80MB
-log_timezone = 'Etc/UTC'
+log_timezone = 'UTC'
 datestyle = 'iso, mdy'
-timezone = 'Etc/UTC'
-lc_messages = 'en_US.utf8'
-lc_monetary = 'en_US.utf8'
-lc_numeric = 'en_US.utf8'
-lc_time = 'en_US.utf8'
+timezone = 'UTC'
+lc_messages = 'C'
+lc_monetary = 'C'
+lc_numeric = 'C'
+lc_time = 'C'
 default_text_search_config = 'pg_catalog.english'
 ```
 
 #### 3.2. Файл конфигурации аутентификации сервера `pg_hba.conf`:
 ```
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
 local   all             all                                     trust
 host    all             all             127.0.0.1/32            trust
-host    all             all             ::1/128                 trust
-local   replication     all                                     trust
-host    replication     all             127.0.0.1/32            trust
-host    replication     all             ::1/128                 trust
 host    all             all             0.0.0.0/0               md5
+host    all             all             ::1/128                 trust
 ```
 
-#### 3.3. Место хранения файлов данных PostgreSQL
-В связи с тем, что после останова контейнера он не сохраняет состояния и любые изменения при повторном запуске пропадают, хранить файлы базы данных необходимо на хостовой системе, с которой выполняется запуск контейнера.
-
-```bash
-# 1. Убедитесь, что каталог, в котором будут храниться
-#    файлы базы данных отсутствует
-[user@... docker_papers]$ sudo ls -la /var/lib/postgresql/data
-ls: невозможно получить доступ к '/var/lib/postgresql/data': Нет такого файла или каталога
-
-# 2. Создаем каталог для хранения файлов базы данных
-[user@... docker_papers]$ sudo mkdir -p /var/lib/postgresql/data
-```
+> ... в доработке, поменять место хранение файлов данных из каталога в хостовый каталог.
 
 ### 4. Сборка своего образа на базе `registry.altlinux.org/c10f/postgresql`
+
+**Внимание!!!**, перед сборкой образа проверьте структуру каталога, именования фалов и каталогов проекта и содежание конфигурационных файлов.
+
+#### Содержание Dockerfile
 ```Dockerfile
-FROM registry.altlinux.org/c10f/postgresql
+FROM registry.altlinux.org/c10f/postgresql:latest
 
-# Определяем переменные окружения
-# ENV
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=postgres
+ENV PGDATA=/var/lib/pgsql/data
 
-# Копируем файлы конфигурации PostgreSQL
-# в домашний каталог контейнера
+RUN chown -R postgres:postgres /var/lib/pgsql
 
+RUN initdb -D ${PGDATA} --locale=C --encoding=UTF8
+
+COPY config/pg_hba.conf ${PGDATA}/pg_hba.conf
+COPY config/postgresql.conf ${PGDATA}/postgresql.conf
+
+# Меняем права на конфиги
+USER root
+RUN chown postgres:postgres ${PGDATA}/pg_hba.conf ${PGDATA}/postgresql.conf
+USER postgres
+
+# Запуск и настройка пароля
+RUN pg_ctl -D ${PGDATA} start && \
+    psql -U postgres -c "ALTER USER postgres WITH PASSWORD '${POSTGRES_PASSWORD}';" && \
+    pg_ctl -D ${PGDATA} stop
+    
+EXPOSE 5432
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD pg_isready -U ${POSTGRES_USER} || exit 1
+
+# CMD ["sh", "-c", "postgres -D ${PGDATA}"]
+
+# Запускаем с явным указанием конфигов
+CMD ["sh", "-c", "postgres -D ${PGDATA} -c config_file=${PGDATA}/postgresql.conf -c hba_file=${PGDATA}/pg_hba.conf"]
 ```
-
-
-> проверить останавливается ли контейнер после запуска, без обращения к bash, если останавливается значит postgres не запущен как служба.
-
-> проверить состояние работы службы postgres.
